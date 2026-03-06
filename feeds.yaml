@@ -1,0 +1,16 @@
+title: "GS MENA Conflict News Monitor"
+description: "Aggregated RSS from multiple Middle East sources."
+
+feeds:
+  - name: "Al Jazeera"
+    url: "https://www.aljazeera.com/xml/rss/all.xml"
+  - name: "Al-Monitor"
+    url: "https://www.al-monitor.com/rss"
+  - name: "Al Bawaba"
+    url: "https://www.albawaba.com/rss/all"
+  - name: "Middle East Eye"
+    url: "https://www.middleeasteye.net/rss"
+  - name: "Middle East Monitor"
+    url: "https://www.middleeastmonitor.com/feed/"
+  - name: "Times of Israel"
+    url: "https://www.timesofisrael.com/feed/"
