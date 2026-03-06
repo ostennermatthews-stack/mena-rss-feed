@@ -22,11 +22,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -35,14 +36,13 @@ jobs:
         run: |
           python scripts/aggregate.py
 
-      - name: Publish feed.xml to gh-pages
+      - name: Publish to gh-pages
         run: |
           set -e
 
-          # Prepare a clean publish dir
+          # Stash the freshly generated feed from main branch workspace
           mkdir -p /tmp/publish
-          cp /tmp/publish/feed.xml ./feed.xml
-          cp /tmp/publish/feed.xml ./feed-alt.xml
+          cp feed.xml /tmp/publish/feed.xml
 
           # Switch to (or create) gh-pages branch in this checkout
           git fetch origin gh-pages || true
@@ -51,11 +51,12 @@ jobs:
           # Clear the branch contents
           git rm -rf . || true
 
-          # Copy only what you want to publish
+          # Publish: write multiple stable paths (avoid cache/querystring issues)
           cp /tmp/publish/feed.xml ./feed.xml
+          cp /tmp/publish/feed.xml ./feed-alt.xml
 
           # Commit and push
-          git add feed.xml
+          git add feed.xml feed-alt.xml
           git config user.name "rss-aggregator-bot"
           git config user.email "rss-aggregator-bot@users.noreply.github.com"
           git commit -m "Update feed" || echo "No changes to commit"
