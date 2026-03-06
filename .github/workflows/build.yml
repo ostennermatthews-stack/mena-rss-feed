@@ -41,7 +41,8 @@ jobs:
 
           # Prepare a clean publish dir
           mkdir -p /tmp/publish
-          cp feed.xml /tmp/publish/feed.xml
+          cp /tmp/publish/feed.xml ./feed.xml
+          cp /tmp/publish/feed.xml ./feed-alt.xml
 
           # Switch to (or create) gh-pages branch in this checkout
           git fetch origin gh-pages || true
