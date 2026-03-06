@@ -16,9 +16,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout main
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # required for rebase
+          ref: main
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -33,27 +35,29 @@ jobs:
         run: |
           python scripts/aggregate.py
 
-      - name: Commit and push feed.xml safely
+      - name: Publish feed.xml to gh-pages
         run: |
-          if git status --porcelain | grep -q "feed.xml"; then
-            git config user.name "rss-aggregator-bot"
-            git config user.email "rss-aggregator-bot@users.noreply.github.com"
+          set -e
 
-            # Commit our change (if any)
-            git add feed.xml
-            git commit -m "Update feed" || echo "No commit needed"
+          # Prepare a clean publish dir
+          mkdir -p /tmp/publish
+          cp feed.xml /tmp/publish/feed.xml
 
-            # Rebase onto latest remote main to avoid non-fast-forward rejects
-            git fetch origin main
-            git rebase origin/main || (git rebase --abort && git reset --hard origin/main)
+          # Switch to (or create) gh-pages branch in this checkout
+          git fetch origin gh-pages || true
+          git checkout gh-pages || git checkout --orphan gh-pages
 
-            # Ensure feed.xml matches the rebased/reset tree
-            python scripts/aggregate.py
-            git add feed.xml
-            git commit -m "Update feed" || echo "No commit needed after rebase/reset"
+          # Clear the branch contents
+          git rm -rf . || true
 
-            # Push (retry once in case another run landed just before us)
-            git push origin main || (sleep 3 && git push origin main)
-          else
-            echo "No changes."
-          fi
+          # Copy only what you want to publish
+          cp /tmp/publish/feed.xml ./feed.xml
+
+          # Commit and push
+          git add feed.xml
+          git config user.name "rss-aggregator-bot"
+          git config user.email "rss-aggregator-bot@users.noreply.github.com"
+          git commit -m "Update feed" || echo "No changes to commit"
+
+          # Force-with-lease is safe here because ONLY this workflow should write gh-pages
+          git push --force-with-lease origin gh-pages
