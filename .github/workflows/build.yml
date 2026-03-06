@@ -5,6 +5,10 @@ on:
     - cron: "*/5 * * * *"
   workflow_dispatch:
 
+concurrency:
+  group: feed-update
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -13,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required for rebase
 
       - uses: actions/setup-python@v5
         with:
@@ -27,14 +33,27 @@ jobs:
         run: |
           python scripts/aggregate.py
 
-      - name: Commit feed.xml
+      - name: Commit and push feed.xml safely
         run: |
           if git status --porcelain | grep -q "feed.xml"; then
             git config user.name "rss-aggregator-bot"
             git config user.email "rss-aggregator-bot@users.noreply.github.com"
+
+            # Commit our change (if any)
             git add feed.xml
-            git commit -m "Update feed"
-            git push
+            git commit -m "Update feed" || echo "No commit needed"
+
+            # Rebase onto latest remote main to avoid non-fast-forward rejects
+            git fetch origin main
+            git rebase origin/main || (git rebase --abort && git reset --hard origin/main)
+
+            # Ensure feed.xml matches the rebased/reset tree
+            python scripts/aggregate.py
+            git add feed.xml
+            git commit -m "Update feed" || echo "No commit needed after rebase/reset"
+
+            # Push (retry once in case another run landed just before us)
+            git push origin main || (sleep 3 && git push origin main)
           else
             echo "No changes."
           fi
